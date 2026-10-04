@@ -1,5 +1,3 @@
-
-```markdown
 # CentrAlign AI — Autonomous Task Worker
 
 An autonomous AI task worker that accepts a natural-language goal, creates an execution plan, uses tools to perform actions, observes results, adapts to failures, retries when appropriate, and independently verifies the final outcome.
@@ -12,13 +10,29 @@ The project was built as a take-home submission for the CentrAlign AI Engineerin
 
 **Live application:** `YOUR_RENDER_URL`
 
-The deployed application provides a simple web interface where a user can submit a natural-language task and observe the agent's execution result.
+The deployed application provides a live interface for submitting natural-language tasks to the autonomous worker. The agent plans the task, selects and executes the required tools, observes their results, handles recoverable failures, and independently verifies the final outcome.
 
 ### Endpoints
 
-- `GET /` — Web UI for submitting tasks
-- `POST /run` — Execute an autonomous task and return the trace and verification result
-- `GET /healthz` — Deployment health check
+- `GET /` — Interactive web interface for submitting tasks
+- `POST /run` — Executes a task and returns the execution trace, result, and verification evidence
+- `GET /healthz` — Health check for the deployed service
+
+### Verified Live Execution
+
+The deployed application was successfully tested with the Acme invoice task:
+
+```text
+#1 files_list                 OK
+#2 files_read                 OK
+#3 browser_fill_and_submit    OK
+#4 internal_api_get           OK
+
+VERIFIED
+status: done
+```
+
+The agent successfully located the latest invoice, extracted the amount and due date, submitted the information to the internal tracker, and independently verified that the expected data was recorded.
 
 ---
 
@@ -63,6 +77,7 @@ The system then:
 9. Returns a final status and execution evidence.
 
 ---
+
 
 ## Key Features
 
