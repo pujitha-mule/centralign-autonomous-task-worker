@@ -51,7 +51,7 @@ The worker exposes multiple tools:
 | `internal_api_get` | Retrieve tracker records for verification |
 | `human_ask` | Request clarification or approval when required |
 
-### 🔄 Retry and Recovery
+### Retry and Recovery
 
 Transient tool failures are handled automatically.
 
