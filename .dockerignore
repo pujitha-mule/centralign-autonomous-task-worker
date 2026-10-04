@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+eval_out/
+memory_store.json
+.pytest_cache/
+.git/
+.gitignore
+tests/
