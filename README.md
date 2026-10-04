@@ -33,13 +33,13 @@ the agent independently:
 
 ## Key Capabilities
 
-### 🧠 Autonomous Planning
+### Autonomous Planning
 
 The LLM converts the user's objective into an ordered execution plan.
 
 The plan is not hardcoded to a specific invoice or fixed sequence of values. The agent determines what information it needs and which tools are appropriate.
 
-### 🛠️ Tool Use
+### Tool Use
 
 The worker exposes multiple tools:
 
@@ -67,7 +67,7 @@ Example from the demo:
 
 The task continued successfully without requiring manual intervention.
 
-### 🔍 Independent Verification
+### Independent Verification
 
 The worker does not simply assume that a successful tool call means the task is complete.
 
