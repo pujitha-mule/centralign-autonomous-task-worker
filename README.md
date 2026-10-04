@@ -1,150 +1,209 @@
-# CentrAlign Autonomous AI Task Worker
 
-A lightweight autonomous AI task worker that accepts natural-language tasks, creates an execution plan, selects and uses tools, observes results, adapts to failures, verifies outcomes independently, and returns evidence of completion.
+```markdown
+# CentrAlign AI — Autonomous Task Worker
 
-Built as a take-home implementation for the **CentrAlign AI Engineering Intern** assignment.
+An autonomous AI task worker that accepts a natural-language goal, creates an execution plan, uses tools to perform actions, observes results, adapts to failures, retries when appropriate, and independently verifies the final outcome.
 
----
-
-## What This Project Demonstrates
-
-The worker is designed around an autonomous execution loop:
-
-**Goal → Understand → Plan → Execute → Observe → Adapt → Verify → Complete**
-
-Given a task such as:
-
-> "Find the latest invoice from Acme Corp in the invoices folder, extract the amount and due date, enter it into our internal tracker, and confirm it's done."
-
-the agent independently:
-
-1. Understands the natural-language objective.
-2. Generates a multi-step execution plan.
-3. Searches the available files.
-4. Reads the relevant invoice.
-5. Extracts the required fields from the actual file contents.
-6. Uses browser automation to enter the data into the internal tracker.
-7. Retries when a transient failure occurs.
-8. Verifies the submitted record independently.
-9. Produces an execution trace and evidence.
-10. Returns a final completion status.
+The project was built as a take-home submission for the CentrAlign AI Engineering Intern role.
 
 ---
 
-## Key Capabilities
+## Live Demo
 
-### Autonomous Planning
+**Live application:** `YOUR_RENDER_URL`
 
-The LLM converts the user's objective into an ordered execution plan.
+The deployed application provides a simple web interface where a user can submit a natural-language task and observe the agent's execution result.
 
-The plan is not hardcoded to a specific invoice or fixed sequence of values. The agent determines what information it needs and which tools are appropriate.
+### Endpoints
 
-### Tool Use
+- `GET /` — Web UI for submitting tasks
+- `POST /run` — Execute an autonomous task and return the trace and verification result
+- `GET /healthz` — Deployment health check
 
-The worker exposes multiple tools:
+---
 
-| Tool | Purpose |
-|---|---|
-| `files_list` | Discover files inside the sandbox |
-| `files_read` | Read actual file contents |
-| `browser_fill_and_submit` | Interact with the internal tracker through a browser |
-| `internal_api_get` | Retrieve tracker records for verification |
-| `human_ask` | Request clarification or approval when required |
+## What I Built
 
-### Retry and Recovery
-
-Transient tool failures are handled automatically.
-
-The mock tracker intentionally supports deterministic failure injection so the retry mechanism can be demonstrated reliably.
-
-Example from the demo:
+The system implements an explicit autonomous execution loop:
 
 ```text
-→ step 3 | tool=browser_fill_and_submit
-  retried 2 time(s) — final ok=True
-  observation ok=True
+Goal
+ ↓
+Understand
+ ↓
+Plan
+ ↓
+Execute
+ ↓
+Observe
+ ↓
+Adapt / Retry
+ ↓
+Verify
+ ↓
+Complete
 ```
 
-The task continued successfully without requiring manual intervention.
+The agent receives a natural-language task such as:
 
-### Independent Verification
+> Find the latest invoice from Acme Corp in the invoices folder, extract the amount and due date, enter it into our internal tracker, and confirm it's done.
 
-The worker does not simply assume that a successful tool call means the task is complete.
+Instead of following a fixed invoice-specific sequence, the LLM generates a plan and selects available tools during execution.
 
-After submission, the verifier checks evidence from the tracker and confirms that the expected record exists with the correct values.
+The system then:
+
+1. Locates the relevant file.
+2. Reads the file contents.
+3. Extracts the required values at runtime.
+4. Submits the information through browser automation.
+5. Observes the result.
+6. Retries when a transient action fails.
+7. Queries the tracker independently.
+8. Verifies that the expected data was actually recorded.
+9. Returns a final status and execution evidence.
+
+---
+
+## Key Features
+
+### 1. Natural-Language Task Execution
+
+The worker accepts a high-level task rather than requiring the user to specify individual tool calls.
+
+### 2. Dynamic Planning
+
+The LLM generates an execution plan based on the task and available tools.
+
+### 3. Tool-Based Execution
+
+The agent can use controlled tools for:
+
+- File listing
+- File reading
+- Browser interaction
+- Internal API access
+- Human escalation when required
+
+### 4. Observation-Driven Execution
+
+After each tool call, the agent receives an observation containing the result of the action.
+
+The next action is determined using the current execution state rather than blindly following a predetermined script.
+
+### 5. Retry and Adaptation
+
+Transient failures can trigger retries.
+
+For example, during the reliability demonstration, the browser submission failed temporarily and the agent retried the action before continuing.
 
 Example:
 
 ```text
-VERIFICATION
-{
-  'verified': True,
-  ...
-}
+browser_fill_and_submit
+retry
+browser_fill_and_submit → success
 ```
 
-### 📋 Evidence and Traceability
+### 6. Independent Verification
 
-Each execution produces a structured trace containing:
+The system does not treat successful execution as sufficient evidence of completion.
 
-- Step number
-- Selected tool
-- Arguments
-- Observation
-- Success/failure state
-- Retry count
+After submitting an invoice, it performs an independent tracker lookup and verifies the recorded invoice ID, company, amount, and due date.
 
-The trace can also be rendered as an HTML report for inspection.
+Example:
+
+```text
+Execution:
+Submit to tracker
+
+Verification:
+Tracker GET → expected invoice data
+
+Result:
+VERIFIED
+```
+
+### 7. Execution Trace
+
+The worker records the actions, observations, attempts, and verification information so that the result can be inspected rather than treated as a black box.
 
 ---
 
 # Architecture
 
 ```text
-                    ┌─────────────────────┐
-                    │   Natural Language   │
-                    │        Task          │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │      Planner        │
-                    │  Generate Steps     │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │    Agent Loop       │
-                    │ Plan → Act → Observe│
-                    └──────────┬──────────┘
-                               │
-             ┌─────────────────┼─────────────────┐
-             │                 │                 │
-             ▼                 ▼                 ▼
-       ┌───────────┐     ┌────────────┐    ┌────────────┐
-       │   Files   │     │  Browser   │    │ Internal   │
-       │   Tools   │     │ Automation │    │    API     │
-       └───────────┘     └────────────┘    └────────────┘
-             │                 │                 │
-             └─────────────────┼─────────────────┘
-                               ▼
-                    ┌─────────────────────┐
-                    │      Memory         │
-                    │ Execution Context   │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │      Verifier       │
-                    │ Independent Check   │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │ Evidence + Result   │
-                    │       `done`        │
-                    └─────────────────────┘
+                         Natural Language Task
+                                  |
+                                  v
+                         +------------------+
+                         |      Planner     |
+                         |       LLM        |
+                         +--------+---------+
+                                  |
+                                  v
+                         +------------------+
+                         |    Agent Loop    |
+                         |                  |
+                         | Execute          |
+                         | Observe          |
+                         | Adapt / Retry    |
+                         +--------+---------+
+                                  |
+              +-------------------+-------------------+
+              |                   |                   |
+              v                   v                   v
+        File Tools          Browser Tool       Internal API
+              |                   |                   |
+              +-------------------+-------------------+
+                                  |
+                                  v
+                         +------------------+
+                         |     Memory       |
+                         +--------+---------+
+                                  |
+                                  v
+                         +------------------+
+                         |    Verifier      |
+                         | Independent      |
+                         | outcome check    |
+                         +--------+---------+
+                                  |
+                                  v
+                         VERIFIED / FAILED
 ```
+
+---
+
+## Core Execution Loop
+
+The central agent loop follows this pattern:
+
+```text
+1. Understand the task
+2. Generate a plan
+3. Select the next tool
+4. Execute the tool
+5. Observe the result
+6. Decide whether the result satisfies the current step
+7. Retry or adapt if necessary
+8. Continue until the plan is complete
+9. Independently verify the final outcome
+10. Return completion status and evidence
+```
+
+This loop is implemented explicitly rather than delegated to a heavy autonomous-agent framework.
+
+---
+
+# Tools
+
+| Tool | Purpose |
+|---|---|
+| `files_list` | Locate relevant files in the sandbox |
+| `files_read` | Read file contents and extract task data |
+| `browser_fill_and_submit` | Enter data into the internal tracker through browser automation |
+| `internal_api_get` | Retrieve tracker state for verification |
+| `human_ask` | Provide a mechanism for human intervention when required |
 
 ---
 
@@ -154,74 +213,87 @@ The trace can also be rendered as an HTML report for inspection.
 centralign-autonomous-task-worker/
 │
 ├── agent/
-│   ├── __init__.py
-│   ├── llm.py
 │   ├── loop.py
 │   ├── memory.py
-│   ├── planner.py
-│   ├── retry.py
-│   ├── schemas.py
-│   ├── trace_viewer.py
 │   ├── verifier.py
+│   ├── trace_viewer.py
 │   │
 │   └── tools/
-│       ├── __init__.py
-│       ├── base.py
-│       ├── browser.py
 │       ├── files.py
-│       ├── human.py
-│       └── internal_api.py
+│       ├── browser.py
+│       ├── internal_api.py
+│       └── human.py
 │
 ├── mock_company/
-│   ├── __init__.py
 │   └── server.py
 │
 ├── sandbox/
 │   └── invoices/
-│       ├── acme_invoice_2024_01.txt
 │       ├── acme_invoice_2024_03.txt
 │       └── otherco_invoice_2024_02.txt
 │
 ├── tasks/
-│   ├── __init__.py
-│   ├── evaluate.py
-│   └── suite.py
+│   └── evaluate.py
 │
 ├── tests/
 │   └── test_smoke.py
 │
-├── .env.example
-├── .gitignore
-├── pytest.ini
+├── app.py
+├── run_demo.py
 ├── requirements.txt
-└── run_demo.py
+├── Dockerfile
+├── .dockerignore
+├── render.yaml
+├── .env.example
+└── README.md
 ```
 
 ---
 
-# Tech Stack
+# Technology Stack
 
-- **Python**
-- **FastAPI** — mock internal company service
-- **Playwright** — browser automation
-- **OpenAI-compatible LLM API** — planning and agent reasoning
-- **Pydantic** — structured data models
-- **httpx** — HTTP communication
-- **Pytest** — automated tests
-- **Rich** — terminal execution output
+### Language
 
-The implementation intentionally avoids a heavy agent framework so that the planning, execution, retry, memory, tool use, and verification behavior remains explicit and inspectable.
+- Python
+
+### AI / LLM
+
+- OpenAI-compatible LLM API
+- Groq API
+- `openai/gpt-oss-120b`
+
+### Backend
+
+- FastAPI
+- Uvicorn
+- Pydantic
+
+### Browser Automation
+
+- Playwright
+- Chromium
+
+### HTTP / APIs
+
+- httpx
+
+### Testing
+
+- pytest
+
+### Utilities
+
+- python-dotenv
+- Rich
+
+### Deployment
+
+- Docker
+- Render
 
 ---
 
 # Setup
-
-## Requirements
-
-- Python 3.11+ (64-bit recommended)
-- Git
-- An OpenAI-compatible LLM API key
-- Windows/Linux/macOS
 
 ## 1. Clone the repository
 
@@ -232,6 +304,8 @@ cd centralign-autonomous-task-worker
 
 ## 2. Create a virtual environment
 
+Python 3.11 is recommended.
+
 ### Windows
 
 ```powershell
@@ -239,94 +313,83 @@ py -3.11 -m venv .venv
 .venv\Scripts\Activate.ps1
 ```
 
-### macOS/Linux
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
-
 ## 3. Install dependencies
 
 ```bash
-python -m pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
-Install the browser runtime:
+## 4. Install Playwright Chromium
 
 ```bash
 playwright install chromium
 ```
 
-## 4. Configure the LLM
+## 5. Configure environment variables
 
-Copy the example environment file:
+Create a `.env` file based on `.env.example`.
 
-### Windows
+Example:
 
-```powershell
-Copy-Item .env.example .env
+```env
+LLM_PROVIDER=openai
+OPENAI_API_KEY=YOUR_API_KEY
+OPENAI_BASE_URL=https://api.groq.com/openai/v1
+LLM_MODEL=openai/gpt-oss-120b
+MAX_STEPS=15
 ```
 
-### macOS/Linux
-
-```bash
-cp .env.example .env
-```
-
-Then configure the required LLM provider/API credentials in `.env`.
-
-**Never commit `.env` or API keys to Git.**
+Never commit `.env` or API keys to GitHub.
 
 ---
 
-# Running the Demo
+# Run Locally
 
-Run:
+Run the demonstration:
 
 ```bash
 python run_demo.py
 ```
 
-The demo starts the mock company service, executes an invoice task, prints the plan and execution trace, performs verification, and writes an HTML trace.
-
-The generated report is:
-
-```text
-eval_out/demo.html
-```
-
-Open it locally to inspect the execution trace.
+The demonstration starts the mock company tracker and executes the autonomous worker against the invoice task.
 
 ---
 
-# Evaluation Suite
+# Evaluation
 
-Run the complete evaluation:
+The evaluation suite tests the worker against multiple invoice-processing tasks.
+
+Run:
 
 ```bash
 python tasks/evaluate.py
 ```
 
-The evaluation runs two different invoice tasks:
-
-1. Latest Acme Corp invoice
-2. OtherCo invoice
-
-The evaluator checks:
-
-- Task completion
-- Verification status
-- Expected evidence
-- Number of execution steps
-
-### Evaluation Result
+Expected result:
 
 ```text
 Success rate: 2/2
 ```
 
-Both evaluation tasks completed successfully.
+The two evaluated tasks cover:
+
+### Acme Corp
+
+```text
+Invoice: ACME-2024-03
+Amount: 12,500.00
+Due Date: 2024-04-15
+```
+
+### OtherCo
+
+```text
+Invoice: OTHER-2024-02
+Amount: 3,100.00
+Due Date: 2024-03-01
+```
+
+Both tasks completed successfully and were independently verified.
 
 ---
 
@@ -344,243 +407,322 @@ Current result:
 3 passed
 ```
 
-The smoke tests cover:
-
-- Agent imports
-- File-tool sandbox behavior
-- Generic invoice field extraction
+The tests cover basic system functionality including imports, sandbox safety, and generic invoice extraction behavior.
 
 ---
 
-# Example Execution
+# Reliability Demonstration
 
-For the Acme task, the worker discovered the invoice files:
+The worker includes retry handling for transient tool failures.
+
+A reliability demonstration intentionally introduces a temporary browser submission failure.
+
+The worker observes the failure, retries the action, and continues when the retry succeeds.
+
+Example:
 
 ```text
-acme_invoice_2024_01.txt
-acme_invoice_2024_03.txt
+browser_fill_and_submit
+  ↓
+temporary failure
+  ↓
+retry
+  ↓
+browser_fill_and_submit
+  ↓
+success
 ```
 
-It selected the latest invoice and extracted:
-
-```text
-Invoice ID: ACME-2024-03
-Company: Acme Corp
-Amount: 12500.00
-Due Date: 2024-04-15
-```
-
-It then submitted the information through the browser automation tool.
-
-The mock environment intentionally triggered a transient failure, causing the worker to retry:
+Example output:
 
 ```text
 retried 2 time(s) — final ok=True
 ```
 
-The worker subsequently queried the tracker:
+This demonstrates that the worker does not immediately fail when a tool action encounters a recoverable error.
+
+---
+
+# Independent Verification
+
+Verification is intentionally separated from the action that performs the task.
+
+For an invoice submission:
 
 ```text
-{
-  'invoice_id': 'ACME-2024-03',
-  'company': 'Acme Corp',
-  'amount': '12500.00',
-  'due_date': '2024-04-15'
-}
+1. Read invoice
+2. Extract invoice data
+3. Submit invoice
+4. Query tracker independently
+5. Compare observed tracker state
+6. Mark task VERIFIED
 ```
 
-The independent verifier marked the task:
+Example verification evidence:
 
 ```text
-verified: True
+Read file:
+invoices/acme_invoice_2024_03.txt
+
+Submitted to tracker:
+ACME-2024-03
+
+Tracker GET:
+ACME-2024-03
+Acme Corp
+12,500.00
+2024-04-15
+
+Result:
+VERIFIED
 ```
 
-Final status:
+This reduces the risk of treating an attempted action as proof that the intended outcome actually occurred.
+
+---
+
+# Live Deployment
+
+The application is deployed as a Docker-based FastAPI service on Render.
+
+The Docker image uses the official Playwright Python image so that Chromium and its required system dependencies are available at runtime.
+
+The deployment exposes:
 
 ```text
-done
+GET /
+GET /healthz
+POST /run
 ```
+
+The web UI allows a recruiter or evaluator to submit a task directly to the deployed autonomous worker.
+
+---
+
+# Demo
+
+The recommended demonstration shows:
+
+1. Project architecture
+2. Core autonomous loop
+3. Local execution
+4. Retry behavior
+5. Evaluation result
+6. Automated tests
+7. Live Render deployment
+8. Independent verification
+
+The live demo demonstrates the same agent running through the deployed FastAPI service.
+
+---
+
+# What Is Genuinely Autonomous?
+
+The following components are determined dynamically at runtime:
+
+- Natural-language task interpretation
+- Plan generation
+- Tool selection
+- Runtime extraction of invoice information
+- Progression based on tool observations
+- Retry decisions
+- Completion decision
+- Independent verification reasoning
+
+For example, the invoice amount and due date are read from the actual invoice file rather than embedded into the agent's execution logic.
+
+---
+
+# What Is Hard-Coded or Manually Configured?
+
+The current demonstration environment intentionally controls:
+
+- Available tools
+- Sandbox directory
+- Mock internal tracker
+- Evaluation data
+- Browser target
+- Available LLM configuration
+- Runtime environment variables
+
+The evaluation tasks and mock company data are predefined.
+
+However, the core execution flow is not hard-coded to the specific invoice values.
 
 ---
 
 # Design Decisions
 
-## 1. Explicit Agent Loop
+## Explicit Agent Loop
 
-Instead of hiding execution behind a framework, the core loop is explicit:
+The core reasoning loop is implemented directly rather than relying on a large agent framework.
 
-```text
-Plan
-  ↓
-Select Tool
-  ↓
-Execute
-  ↓
-Observe
-  ↓
-Update Context
-  ↓
-Continue / Retry / Adapt
-  ↓
-Verify
-```
+This makes the execution flow easier to inspect, debug, and modify.
 
-This makes the system easier to inspect, debug, and evaluate.
+## Tool Abstraction
 
-## 2. Real Tool Execution
+Tools expose structured inputs and outputs so the agent can reason over observations instead of manipulating implementation details directly.
 
-The agent does not merely generate a textual answer.
+## Independent Verification
 
-It interacts with:
+Verification is deliberately separated from execution so that the system has evidence that the desired state was actually reached.
 
-- Real files in the sandbox
-- A running HTTP service
-- A Chromium browser through Playwright
+## Controlled Environment
 
-This allows the demo to validate actual execution rather than simulated responses.
+The project uses a sandbox and mock tracker to demonstrate autonomous behavior without requiring unauthorized access to real external systems.
 
-## 3. Separate Verification
+## Evidence-Oriented Execution
 
-Verification is deliberately separated from task execution.
-
-The agent must provide evidence that the requested state was actually achieved rather than treating the final tool call as proof of completion.
-
-## 4. Deterministic Failure Injection
-
-The mock company service can intentionally fail a submission once.
-
-This provides a reproducible way to demonstrate:
-
-```text
-Failure → Retry → Success
-```
-
-rather than relying on an unpredictable external failure.
-
-## 5. Generic Extraction
-
-Invoice values are extracted from the actual file contents.
-
-The implementation is not dependent on hardcoded Acme-specific values for the extraction logic, allowing the same extraction mechanism to work with different invoice identifiers, companies, amounts, and dates.
-
-## 6. Human-in-the-Loop Capability
-
-A human interaction tool is available for cases where the agent needs clarification or approval.
-
-The goal is not to force autonomous execution when an important decision cannot safely be inferred.
-
----
-
-# Reliability Strategy
-
-The worker uses several layers of reliability:
-
-### Tool-level handling
-
-Tool results are represented with explicit success/failure information.
-
-### Retry handling
-
-Transient failures can be retried before the agent decides whether to continue or adapt.
-
-### Execution memory
-
-The worker maintains execution context so later steps can use observations from earlier steps.
-
-### Independent verification
-
-Completion is only accepted when the verifier finds sufficient evidence.
-
-This separates:
-
-```text
-"I attempted the action"
-```
-
-from:
-
-```text
-"The requested outcome actually exists."
-```
+The worker records execution information so the final result can be inspected and explained.
 
 ---
 
 # Limitations
 
-This implementation is intentionally scoped to a controlled demonstration environment.
+The current implementation operates in a controlled demonstration environment with a mock tracker and a relatively narrow invoice-processing workflow.
 
-Current limitations include:
+The current evaluation does not cover the full range of failures and integrations that an autonomous worker would encounter in production.
 
-- The browser workflow targets the provided mock tracker rather than arbitrary production websites.
-- File access is intentionally restricted to the sandbox.
-- The current evaluation tasks are invoice-oriented.
-- Human approval is exposed as a tool but the demo does not require a real human escalation.
-- The mock company API is local and deterministic rather than a production backend.
-- The system does not yet include long-term persistent memory across independent runs.
-- Production deployments would require stronger authentication, authorization, secrets management, observability, and sandbox isolation.
+Additional production requirements would include:
 
----
-
-# Future Improvements
-
-Potential next steps include:
-
-- Persistent task memory across sessions
-- More general browser workflows
-- Additional API and application integrations
-- Richer failure classification
-- Exponential backoff and retry policies
-- More sophisticated human approval flows
-- Persistent execution history
-- Authentication and authorization boundaries
-- Production-grade observability
-- Parallel task execution
-- More comprehensive evaluation suites
-- Cost and latency tracking
-- Stronger action safety policies
+- Stronger authentication
+- Secure tool permissions
+- Browser isolation
+- Sandboxing
+- Persistent long-term memory
+- Better failure classification
+- More comprehensive observability
+- Broader evaluation coverage
+- Cost and latency monitoring
+- Human approval for sensitive actions
 
 ---
 
-# Security Notes
+# Security Considerations
 
-- API credentials are loaded through environment variables.
-- `.env` is excluded from version control.
-- The agent's file access is restricted to the sandbox.
-- The browser interaction targets the controlled mock application.
-- Production deployment would require additional security controls.
-
----
-
-# Evaluation Summary
-
-| Capability | Result |
-|---|---|
-| Natural-language task understanding | ✅ |
-| Autonomous planning | ✅ |
-| Tool selection | ✅ |
-| File interaction | ✅ |
-| Browser automation | ✅ |
-| Failure recovery | ✅ |
-| Retry mechanism | ✅ |
-| Execution memory | ✅ |
-| Independent verification | ✅ |
-| Evidence generation | ✅ |
-| Multiple task evaluation | ✅ |
-| Automated tests | ✅ |
-| Evaluation success rate | **2/2** |
-| Smoke tests | **3 passed** |
+- API credentials are supplied through environment variables.
+- `.env` is excluded from Git.
+- The system uses sandbox data and a mock internal tracker.
+- No confidential company data is included.
+- No unauthorized third-party systems are accessed.
+- Production deployment would require stronger authentication, authorization, isolation, and rate limiting.
 
 ---
 
-# Repository
+# What I Would Build Next
 
-**GitHub:**  
+With another two weeks, I would focus on:
+
+### 1. Persistent Memory
+
+Add durable memory across tasks so the worker can retain useful context between executions.
+
+### 2. Broader Tool Integrations
+
+Add additional safe browser/API/file tools and support more task categories.
+
+### 3. Better Failure Handling
+
+Introduce structured failure classification, exponential backoff, and more targeted retry strategies.
+
+### 4. Human Approval
+
+Add human approval gates before sensitive or irreversible actions.
+
+### 5. Broader Evaluation
+
+Create a larger evaluation suite covering:
+
+- Tool failures
+- Missing files
+- Incorrect data
+- API failures
+- Browser failures
+- Ambiguous tasks
+- Verification failures
+
+### 6. Observability
+
+Track:
+
+- Execution latency
+- Tool usage
+- Retry count
+- Token/cost usage
+- Success rate
+- Failure categories
+
+---
+
+# AI Coding Assistance Disclosure
+
+AI coding assistance was used during development for implementation support, debugging, code refinement, and documentation.
+
+The final system was reviewed, tested, and understood by the author.
+
+The core autonomous loop, tools, retry behavior, verification logic, evaluation setup, and deployment configuration are included in this repository and can be explained or modified during a technical interview.
+
+---
+
+# Submission
+
+**GitHub Repository**
+
 https://github.com/pujitha-mule/centralign-autonomous-task-worker
 
+**Live Demo**
+
+`YOUR_RENDER_URL`
+
+**Demo Video**
+
+`YOUR_DEMO_VIDEO_URL`
+
 ---
 
-## Author
+# Final Evaluation Summary
 
-**Pujitha Mule**
+| Criterion | Implementation |
+|---|---|
+| Natural-language task input | Yes |
+| Dynamic planning | Yes |
+| Tool selection | Yes |
+| File interaction | Yes |
+| Browser automation | Yes |
+| API interaction | Yes |
+| Observation loop | Yes |
+| Retry / adaptation | Yes |
+| Independent verification | Yes |
+| Execution trace | Yes |
+| Multiple evaluation tasks | Yes |
+| Evaluation success | 2/2 |
+| Automated tests | 3 passed |
+| Cloud deployment | Render |
+| Docker deployment | Yes |
+| AI coding assistance disclosed | Yes |
 
-B.Tech Computer Science & Engineering — VIT-AP, 2026
+---
+
+## Result
+
+The project demonstrates a working autonomous task worker that can:
+
+```text
+Understand
+    ↓
+Plan
+    ↓
+Use tools
+    ↓
+Observe
+    ↓
+Adapt / Retry
+    ↓
+Verify independently
+    ↓
+Complete with evidence
+```
+
+The same worker is available locally and through the deployed FastAPI application.
+```
+
