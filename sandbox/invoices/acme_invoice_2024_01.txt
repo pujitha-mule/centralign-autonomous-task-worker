@@ -1,0 +1,4 @@
+INVOICE  ACME-2024-01
+Vendor: Acme Corp
+Amount: 8,200.00
+Due Date: 2024-02-10

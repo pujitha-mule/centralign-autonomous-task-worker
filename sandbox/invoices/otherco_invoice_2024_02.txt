@@ -1,0 +1,4 @@
+INVOICE  OTHER-2024-02
+Vendor: OtherCo
+Amount: 3,100.00
+Due Date: 2024-03-01
