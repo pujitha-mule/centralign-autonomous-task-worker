@@ -8,7 +8,7 @@ The project was built as a take-home submission for the CentrAlign AI Engineerin
 
 ## Live Demo
 
-**Live application:** `YOUR_RENDER_URL`
+**Live application:** `https://centralign-task-worker.onrender.com/`
 
 The deployed application provides a live interface for submitting natural-language tasks to the autonomous worker. The agent plans the task, selects and executes the required tools, observes their results, handles recoverable failures, and independently verifies the final outcome.
 
@@ -687,11 +687,11 @@ https://github.com/pujitha-mule/centralign-autonomous-task-worker
 
 **Live Demo**
 
-`YOUR_RENDER_URL`
+`https://centralign-task-worker.onrender.com/`
 
 **Demo Video**
 
-`YOUR_DEMO_VIDEO_URL`
+`https://drive.google.com/file/d/1QJv9oEagVshKNwiBUob-cskTCm167CpZ/view?usp=sharing`
 
 ---
 
